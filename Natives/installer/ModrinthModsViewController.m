@@ -437,8 +437,10 @@ static NSString *MRCategorySymbol(NSString *category) {
     } else if (self.versions.count) {
         NSDictionary *version = self.versions[indexPath.row];
         cell.textLabel.text = version[@"name"] ?: version[@"version_number"];
+        NSString *versionType = version[@"version_type"] ?: @"";
+        if ([@[@"release", @"beta", @"alpha"] containsObject:versionType]) versionType = localize([@"content.version." stringByAppendingString:versionType], nil);
         NSMutableArray *tags = [NSMutableArray new];
-        for (NSString *tag in @[[version[@"game_versions"] componentsJoinedByString:@", "] ?: @"", [version[@"loaders"] componentsJoinedByString:@", "] ?: @"", version[@"version_type"] ?: @""]) if (tag.length) [tags addObject:tag];
+        for (NSString *tag in @[[version[@"game_versions"] componentsJoinedByString:@", "] ?: @"", [version[@"loaders"] componentsJoinedByString:@", "] ?: @"", versionType]) if (tag.length) [tags addObject:tag];
         cell.detailTextLabel.text = [version[@"downloadUnavailable"] boolValue] ? localize(@"content.download.restricted", nil) : [tags componentsJoinedByString:@" · "];
         UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
         NSString *operation = localize([version[@"downloadUnavailable"] boolValue] ? @"content.download.unavailable_title" : [self actionForVersion:version], nil);

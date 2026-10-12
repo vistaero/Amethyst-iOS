@@ -251,7 +251,7 @@
     self.authVC.presentationContextProvider = self;
 
     if ([self.authVC start] == NO) {
-        showDialog(localize(@"Error", nil), @"Unable to open Safari");
+        showDialog(localize(@"Error", nil), localize(@"login.error.open_browser", nil));
     }
 }
 

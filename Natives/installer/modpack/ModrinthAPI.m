@@ -1,5 +1,6 @@
 #import "MinecraftResourceDownloadTask.h"
 #import "ModrinthAPI.h"
+#import "utils.h"
 #import "ModrinthSearchFilters.h"
 #import "PLProfiles.h"
 
@@ -17,7 +18,7 @@
     id response = [self getEndpoint:@"tag/category" params:nil];
     if (!response) return nil;
     if (![response isKindOfClass:NSArray.class]) {
-        self.lastError = [NSError errorWithDomain:@"Modrinth" code:4 userInfo:@{NSLocalizedDescriptionKey: @"Invalid Modrinth category response"}];
+        self.lastError = [NSError errorWithDomain:@"Modrinth" code:4 userInfo:@{NSLocalizedDescriptionKey: localize(@"content.modrinth.invalid_categories", nil)}];
         return nil;
     }
     NSMutableArray *records = [NSMutableArray new];
@@ -35,7 +36,7 @@
     }
 
     if (![response isKindOfClass:NSDictionary.class] || ![response[@"hits"] isKindOfClass:NSArray.class]) {
-        self.lastError = [NSError errorWithDomain:@"Modrinth" code:1 userInfo:@{NSLocalizedDescriptionKey: @"Invalid Modrinth search response"}];
+        self.lastError = [NSError errorWithDomain:@"Modrinth" code:1 userInfo:@{NSLocalizedDescriptionKey: localize(@"content.modrinth.invalid_search", nil)}];
         return nil;
     }
     NSMutableArray *result = modrinthSearchResult ? [modrinthSearchResult mutableCopy] : [NSMutableArray new];
@@ -63,7 +64,7 @@
     id response = [self getEndpoint:[NSString stringWithFormat:@"project/%@/version", projectID] params:[ModrinthSearchFilters versionParameters:filters]];
     if (!response) return nil;
     if (![response isKindOfClass:NSArray.class]) {
-        self.lastError = [NSError errorWithDomain:@"Modrinth" code:2 userInfo:@{NSLocalizedDescriptionKey: @"Invalid Modrinth version response"}];
+        self.lastError = [NSError errorWithDomain:@"Modrinth" code:2 userInfo:@{NSLocalizedDescriptionKey: localize(@"content.modrinth.invalid_versions", nil)}];
         return nil;
     }
     // Search facets describe projects; only version tags prove this particular version matches both filters.
@@ -75,7 +76,7 @@
     id response = [self postEndpoint:@"version_files" params:@{@"hashes": hashes, @"algorithm": @"sha1"}];
     if (!response) return nil;
     if (![response isKindOfClass:NSDictionary.class]) {
-        self.lastError = [NSError errorWithDomain:@"Modrinth" code:3 userInfo:@{NSLocalizedDescriptionKey: @"Invalid Modrinth file lookup response"}];
+        self.lastError = [NSError errorWithDomain:@"Modrinth" code:3 userInfo:@{NSLocalizedDescriptionKey: localize(@"content.modrinth.invalid_files", nil)}];
         return nil;
     }
     return response;
@@ -122,14 +123,14 @@
     NSError *error;
     UZKArchive *archive = [[UZKArchive alloc] initWithPath:packagePath error:&error];
     if (error) {
-        [downloader finishDownloadWithErrorString:[NSString stringWithFormat:@"Failed to open modpack package: %@", error.localizedDescription]];
+        [downloader finishDownloadWithErrorString:[NSString stringWithFormat:localize(@"content.modpack.error_open", nil), error.localizedDescription]];
         return;
     }
 
     NSData *indexData = [archive extractDataFromFile:@"modrinth.index.json" error:&error];
     NSDictionary* indexDict = [NSJSONSerialization JSONObjectWithData:indexData options:kNilOptions error:&error];
     if (error) {
-        [downloader finishDownloadWithErrorString:[NSString stringWithFormat:@"Failed to parse modrinth.index.json: %@", error.localizedDescription]];
+        [downloader finishDownloadWithErrorString:[NSString stringWithFormat:localize(@"content.modpack.error_index", nil), error.localizedDescription]];
         return;
     }
 
@@ -169,13 +170,13 @@
 
     [ModpackUtils archive:archive extractDirectory:@"overrides" toPath:destPath error:&error];
     if (error) {
-        [downloader finishDownloadWithErrorString:[NSString stringWithFormat:@"Failed to extract overrides from modpack package: %@", error.localizedDescription]];
+        [downloader finishDownloadWithErrorString:[NSString stringWithFormat:localize(@"content.modpack.error_overrides", nil), error.localizedDescription]];
         return;
     }
 
     [ModpackUtils archive:archive extractDirectory:@"client-overrides" toPath:destPath error:&error];
     if (error) {
-        [downloader finishDownloadWithErrorString:[NSString stringWithFormat:@"Failed to extract client-overrides from modpack package: %@", error.localizedDescription]];
+        [downloader finishDownloadWithErrorString:[NSString stringWithFormat:localize(@"content.modpack.error_client_overrides", nil), error.localizedDescription]];
         return;
     }
 

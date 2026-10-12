@@ -465,3 +465,68 @@
 "mods.installed.unresolved" = "A required dependency could not be resolved for this profile. No mod files were changed.";
 "mods.installed.conflict" = "The required versions conflict with other enabled mods. No mod files were changed.";
 "mods.installed.enable_file" = "Enable";
+
+// Additional app and shared action translations
+"preference.title.jitstreamer_server" = "JitStreamer server IP";
+"launcher.menu.install_jar" = "Install .jar";
+"preference.title.debug_show_layout_bounds" = "Show layout bounds";
+"custom_controls.control_menu.save.error.default" = "Controls cannot be named \"default\" because they will be overwritten.";
+"preference.title.java_home" = "Use Java 17 for Minecraft < 1.17";
+"Cancel" = "Cancel";
+"Delete" = "Delete";
+"Done" = "Done";
+"Edit profile" = "Edit profile";
+"Error" = "Error";
+"None" = "None";
+"OK" = "OK";
+"Release" = "Release";
+"Rename" = "Rename";
+"Save" = "Save";
+"Share" = "Share";
+"Sign in" = "Sign in";
+"Warning" = "Warning";
+"launcher.loading" = "Loading…";
+"profile.title.modpack" = "Modpack";
+"login.error.open_browser" = "Unable to open Safari.";
+"content.modrinth.invalid_categories" = "Invalid Modrinth category response.";
+"content.modrinth.invalid_search" = "Invalid Modrinth search response.";
+"content.modrinth.invalid_versions" = "Invalid Modrinth version response.";
+"content.modrinth.invalid_files" = "Invalid Modrinth file lookup response.";
+"content.modpack.error_open" = "Failed to open modpack package: %@";
+"content.modpack.error_index" = "Failed to parse modrinth.index.json: %@";
+"content.modpack.error_overrides" = "Failed to extract overrides from modpack package: %@";
+"content.modpack.error_client_overrides" = "Failed to extract client-overrides from modpack package: %@";
+
+// Installer, account and control editor messages
+"custom_controls.button_edit.width" = "Width";
+"custom_controls.button_edit.height" = "Height";
+"custom_controls.error.dynamic_position" = "Error processing dynamic position";
+"launcher.version_placeholder" = "Specify version…";
+"login.error.keychain_load" = "Failed to load account tokens from Keychain.";
+"login.error.keychain_save" = "Failed to save account tokens to Keychain.";
+"login.error.unknown_xerr" = "%@\n\nUnknown XErr code, response:\n%@";
+"launcher.mcl.error_hash" = "Failed to verify file %@: SHA1 mismatch";
+"launcher.mcl.error_local_account" = "Minecraft can't be legally installed when logged in with a local account. Please switch to an online account to continue.";
+"installer.search_versions" = "Search versions";
+"installer.download_cancelled" = "Download cancelled";
+"installer.download_cancelled_message" = "The download has been cancelled.";
+"installer.download_complete" = "Download complete";
+"installer.run_message" = "%@ installer will now run. After installation completes, you will need to restart the app.";
+"installer.error_versions" = "Error loading versions";
+"content.version.release" = "Release";
+"content.version.beta" = "Beta";
+"content.version.alpha" = "Alpha";
+
+// Runtime validation messages
+"custom_controls.error.open_file" = "Could not open %@: %@";
+"java.error.invalid_class" = "Invalid class file signature: 0x%x";
+"java.error.runtime_arch" = "Wrong runtime architecture: %@ (need aarch64)";
+"java.error.runtime_platform" = "Wrong runtime platform: %@ (need Darwin)";
+"java.error.memory" = "Memory allocation failed";
+"java.error.xz_format" = "The input is not in the .xz format";
+"java.error.compression" = "Unsupported compression options";
+"java.error.corrupt" = "Compressed file is corrupt";
+"java.error.truncated" = "Compressed file is truncated or otherwise corrupt";
+"java.error.unknown" = "Unknown error, possibly a bug";
+"java.error.archive_type" = "Invalid archive type flag: %c";
+"content.version.recommended" = "Recommended";
