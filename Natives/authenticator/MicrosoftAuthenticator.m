@@ -123,7 +123,7 @@ typedef void(^XSTSCallback)(NSString *xsts, NSString *uhs);
                 errorString = @"login.msa.error.xsts.underage";
                 break;
             default:
-                errorString = [NSString stringWithFormat:@"%@\n\nUnknown XErr code, response:\n%@", error.localizedDescription, errorDict];
+                errorString = [NSString stringWithFormat:localize(@"login.error.unknown_xerr", nil), error.localizedDescription, errorDict];
                 break;
         }
         callback(localize(errorString, nil), NO);
@@ -225,7 +225,7 @@ typedef void(^XSTSCallback)(NSString *xsts, NSString *uhs);
 - (void)refreshTokenWithCallback:(Callback)callback {
     // Move tokens to keychain if we haven't
     if (!self.tokenData) {
-        showDialog(localize(@"Error", nil), @"Failed to load account tokens from keychain");
+        showDialog(localize(@"Error", nil), localize(@"login.error.keychain_load", nil));
         callback(nil, YES);
         return;
     }
@@ -240,7 +240,7 @@ typedef void(^XSTSCallback)(NSString *xsts, NSString *uhs);
 - (BOOL)saveChanges {
     BOOL savedToKeychain = [self setAccessToken:self.authData[@"accessToken"] refreshToken:self.authData[@"msaRefreshToken"]];
     if (!savedToKeychain) {
-        showDialog(localize(@"Error", nil), @"Failed to save account tokens to keychain");
+        showDialog(localize(@"Error", nil), localize(@"login.error.keychain_save", nil));
         return NO;
     }
     [self.authData removeObjectsForKeys:@[@"accessToken", @"msaRefreshToken"]];

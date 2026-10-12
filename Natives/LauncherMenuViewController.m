@@ -8,6 +8,7 @@
 #import "LauncherPreferences.h"
 #import "LauncherPreferencesViewController.h"
 #import "LauncherProfilesViewController.h"
+#import "installer/ModrinthModsViewController.h"
 #import "PLProfiles.h"
 #import "PLAccountSkin.h"
 #import "UIKit+hook.h"
@@ -84,6 +85,9 @@
         [LauncherMenuCustomItem vcClass:LauncherNewsViewController.class],
         [LauncherMenuCustomItem vcClass:LauncherProfilesViewController.class],
         [LauncherMenuCustomItem vcClass:LauncherPreferencesViewController.class],
+        [LauncherMenuCustomItem vcClass:ModrinthModsViewController.class],
+        [LauncherMenuCustomItem vcClass:LauncherResourcePacksViewController.class],
+        [LauncherMenuCustomItem vcClass:LauncherShaderPacksViewController.class],
     ].mutableCopy;
     if (realUIIdiom != UIUserInterfaceIdiomTV) {
         [self.options addObject:(id)[LauncherMenuCustomItem

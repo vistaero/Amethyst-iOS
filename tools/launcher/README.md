@@ -19,3 +19,11 @@ python3 tools/launcher/test-ui.py --landscape --baseline --baseline-ref origin/m
 ```
 
 Keep simulator reports and generated screenshots out of commits.
+
+Check the English and Spanish app strings and permission descriptions on macOS:
+
+```sh
+python3 scripts/check-localizations.py
+```
+
+This rejects missing translations, duplicate or empty entries, incompatible format arguments, and missing literal keys referenced by the launcher.
