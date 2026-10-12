@@ -11,41 +11,41 @@ case "${1:-}" in
     --check) CHECK_ONLY=1 ;;
     --help|-h)
         cat <<'HELP'
-Uso: ./build_and_run.command [--check]
+Usage: ./build_and_run.command [--check]
 
-Compila, empaqueta, firma, instala y abre Amethyst en un iPhone o iPad.
---check comprueba la configuración sin compilar ni instalar.
+Build, package, sign, install and launch Amethyst on an iPhone or iPad.
+--check validates the configuration without building or installing.
 
-Opciones mediante variables de entorno:
-  DEVICE_UDID          UDID, identificador o nombre del dispositivo.
-  PROVISIONING_PROFILE Perfil .mobileprovision (por defecto, el de la app).
-  TEAM_ID              Equipo de Apple; se obtiene del perfil si se omite.
-  SIGN_IDENTITY        SHA-1 o nombre de un certificado incluido en el perfil.
-  BUNDLE_ID            Identificador de la app; conserva el del paquete actual.
-  BUILD_VERSION        Versión de compilación; se incrementa automáticamente.
-  BUILD_TAG            Etiqueta de compilación; se incrementa automáticamente.
-  BOOTJDK              Directorio bin de un JDK 8 para compilar Java.
-  DEPENDENCIES_DIR     Directorio con los runtimes iOS 8, 17, 21 y 25.
-  RENDERER_LIB_DIR     Directorio con MobileGlues y SPIRV-Cross ya compilados.
-  LAUNCH_AFTER_INSTALL 0 para instalar sin abrir la app (por defecto, 1).
-  START_STOPPED        1 para abrir suspendida y conectar LLDB (por defecto, 0).
+Environment variables:
+  DEVICE_UDID          Device UDID, identifier or name.
+  PROVISIONING_PROFILE Path to a .mobileprovision file (defaults to the app's profile).
+  TEAM_ID              Apple team ID; read from the profile if omitted.
+  SIGN_IDENTITY        SHA-1 or name of a certificate included in the profile.
+  BUNDLE_ID            App identifier; preserves the current package's identifier.
+  BUILD_VERSION        Build version; increments automatically.
+  BUILD_TAG            Build tag; increments automatically.
+  BOOTJDK              JDK 8 bin directory used to compile Java.
+  DEPENDENCIES_DIR     Directory containing iOS Java runtimes 8, 17, 21 and 25.
+  RENDERER_LIB_DIR     Directory containing built MobileGlues and SPIRV-Cross libraries.
+  LAUNCH_AFTER_INSTALL 0 to install without launching the app (default: 1).
+  START_STOPPED        1 to launch suspended for LLDB attachment (default: 0).
 
-En un worktree se reutilizan las dependencias y el perfil del checkout
-principal cuando no están presentes aquí. La app se compila en esta rama.
+In a worktree, dependencies and the profile are reused from the primary
+checkout when unavailable locally. The app is built from this branch.
 HELP
         exit 0 ;;
     "") ;;
-    *) printf 'Argumento desconocido: %s. Usa --help.\n' "$1" >&2; exit 1 ;;
+    *) printf 'Unknown argument: %s. Use --help.\n' "$1" >&2; exit 1 ;;
 esac
 if [[ $# -gt 1 ]]; then
-    printf 'Usa ./build_and_run.command [--check].\n' >&2
+    printf 'Use ./build_and_run.command [--check].\n' >&2
     exit 1
 fi
 
-trap 'status=$?; printf "El flujo ha fallado en la línea %s (código %s).\n" "$LINENO" "$status" >&2; exit "$status"' ERR
+trap 'status=$?; printf "The workflow failed at line %s (exit code %s).\n" "$LINENO" "$status" >&2; exit "$status"' ERR
 for tool in python3 cmake make security codesign xcrun git; do
     if ! command -v "$tool" >/dev/null 2>&1; then
-        printf 'Falta una herramienta necesaria: %s\n' "$tool" >&2
+        printf 'Missing required tool: %s\n' "$tool" >&2
         exit 1
     fi
 done
@@ -69,7 +69,7 @@ fi
 RENDERER_LIB_DIR_OVERRIDE="${RENDERER_LIB_DIR:-}"
 RENDERER_LIB_DIR="${RENDERER_LIB_DIR:-$DEFAULT_RENDERER}"
 if [[ ! -f "$PROFILE_SOURCE" ]]; then
-    printf 'No se encuentra el perfil: %s. Indícalo con PROVISIONING_PROFILE.\n' "$PROFILE_SOURCE" >&2
+    printf 'Profile not found: %s. Set PROVISIONING_PROFILE to its path.\n' "$PROFILE_SOURCE" >&2
     exit 1
 fi
 for required in scripts/build/package-development.py scripts/build/sign-development.py \
@@ -77,24 +77,24 @@ for required in scripts/build/package-development.py scripts/build/sign-developm
     Natives/external/DBNumberedSlider/Classes/DBNumberedSlider.m \
     Natives/external/fishhook/fishhook.c Natives/external/UnzipKit/UnzipKit.h; do
     if [[ ! -f "$required" ]]; then
-        printf 'Falta una dependencia: %s. Inicializa los submódulos y prepara los headers de UnzipKit.\n' "$required" >&2
+        printf 'Missing dependency: %s. Initialize the submodules and prepare the UnzipKit headers.\n' "$required" >&2
         exit 1
     fi
 done
 for version in 8 17 21 25; do
     if [[ ! -f "$DEPENDENCIES_DIR/java-$version-openjdk/release" ]]; then
-        printf 'Falta el runtime iOS de Java %s en %s. Indica DEPENDENCIES_DIR.\n' "$version" "$DEPENDENCIES_DIR" >&2
+        printf 'Missing iOS Java %s runtime in %s. Set DEPENDENCIES_DIR.\n' "$version" "$DEPENDENCIES_DIR" >&2
         exit 1
     fi
 done
 if [[ ! -f "$RENDERER_LIB_DIR/libmobileglues.dylib" || ! -f "$RENDERER_LIB_DIR/libspirv-cross-c-shared.0.dylib" ]]; then
     if [[ -n "${RENDERER_LIB_DIR_OVERRIDE:-}" ]]; then
-        printf 'Las bibliotecas del renderer no están completas.\n' >&2
+        printf 'The renderer libraries are incomplete.\n' >&2
         exit 1
     fi
     RENDERER_LIB_DIR="$ROOT/Natives/build"
     if [[ ! -f Natives/external/MobileGlues/src/main/cpp/CMakeLists.txt || ! -f Natives/external/MobileGlues/src/main/cpp/libraries/ios/libspirv-cross-c-shared.0.dylib ]]; then
-        printf 'Falta MobileGlues. Inicializa sus submódulos recursivamente o indica RENDERER_LIB_DIR.\n' >&2
+        printf 'MobileGlues is missing. Initialize its submodules recursively or set RENDERER_LIB_DIR.\n' >&2
         exit 1
     fi
 fi
@@ -129,13 +129,13 @@ def fail(message):
 teams = profile.get("TeamIdentifier", [])
 team = os.environ.get("TEAM_ID") or (teams[0] if teams else "")
 if not team or team not in teams:
-    fail("TEAM_ID no coincide con el equipo del perfil de aprovisionamiento.")
+    fail("TEAM_ID does not match the provisioning profile's team.")
 expiration = profile.get("ExpirationDate")
 if not expiration or expiration <= datetime.datetime.utcnow():
-    fail("El perfil de aprovisionamiento ha caducado; usa uno vigente.")
+    fail("The provisioning profile has expired; use a valid profile.")
 entitlements = dict(profile.get("Entitlements", {}))
 if not entitlements.get("get-task-allow"):
-    fail("Se necesita un perfil de desarrollo con get-task-allow para ejecutar y depurar.")
+    fail("A development profile with get-task-allow is required to launch and debug.")
 
 allowed_id = entitlements.get("application-identifier", "")
 prefix, separator, profile_bundle = allowed_id.partition(".")
@@ -143,7 +143,7 @@ bundle_id = os.environ.get("BUNDLE_ID") or current.get("CFBundleIdentifier")
 if not bundle_id:
     bundle_id = profile_bundle if "*" not in profile_bundle else "org.angelauramc.amethyst"
 if not separator or not fnmatch.fnmatchcase(prefix + "." + bundle_id, allowed_id):
-    fail(f"El perfil no permite BUNDLE_ID={bundle_id}. Usa un perfil compatible con la app.")
+    fail(f"The profile does not allow BUNDLE_ID={bundle_id}. Use a profile compatible with the app.")
 
 # Certificate names need not contain TeamIdentifier. Match the profile's DER
 # certificates to identities with a private key available in the keychain.
@@ -157,8 +157,8 @@ matches = [(sha.upper(), name) for sha, name in identities
            and (not requested_identity or requested_identity.upper() == sha.upper()
                 or requested_identity == name)]
 if not matches:
-    fail("No hay un certificado válido con clave privada que esté incluido en el perfil. "
-         "Comprueba el llavero, PROVISIONING_PROFILE y SIGN_IDENTITY.")
+    fail("No valid certificate with a private key matches the profile. "
+         "Check Keychain, PROVISIONING_PROFILE and SIGN_IDENTITY.")
 identity = matches[0][0]
 
 devices = json.loads((work / "devices.json").read_text())["result"]["devices"]
@@ -186,14 +186,14 @@ else:
     matches = wired or connected or paired
 if len(matches) != 1:
     available = ", ".join(f'{d.get("deviceProperties", {}).get("name", "iOS")} ({d["identifier"]})'
-                          for d in (matches or devices)) or "ninguno"
-    fail(f"No se puede elegir un único iPhone/iPad. Dispositivos: {available}. "
-         "Conecta el dispositivo o indica DEVICE_UDID.")
+                          for d in (matches or devices)) or "none"
+    fail(f"Unable to select a single iPhone or iPad. Devices: {available}. "
+         "Connect the device or set DEVICE_UDID.")
 device = matches[0]
 if device.get("deviceProperties", {}).get("developerModeStatus") != "enabled":
-    fail("Activa el modo de desarrollador en el dispositivo antes de instalar.")
+    fail("Enable Developer Mode on the device before installing.")
 if device.get("hardwareProperties", {}).get("udid") not in profile.get("ProvisionedDevices", []):
-    fail("El dispositivo no está incluido en el perfil. Regístralo y renueva el perfil.")
+    fail("The device is not included in the profile. Register it and renew the profile.")
 
 def increment(value):
     match = re.fullmatch(r"(.*?)(\d+)", value)
@@ -225,18 +225,18 @@ if [[ -z "${BOOTJDK:-}" ]]; then
     fi
 fi
 if [[ ! -x "$BOOTJDK/javac" || ! -x "$BOOTJDK/jar" ]]; then
-    printf 'BOOTJDK debe apuntar al directorio bin de un JDK 8: %s\n' "$BOOTJDK" >&2
+    printf 'BOOTJDK must point to a JDK 8 bin directory: %s\n' "$BOOTJDK" >&2
     exit 1
 fi
 if [[ "$("$BOOTJDK/javac" -version 2>&1)" != 'javac 1.8.'* ]]; then
-    printf 'La compilación Java necesita JDK 8. Indícalo con BOOTJDK.\n' >&2
+    printf 'The Java build requires JDK 8. Set BOOTJDK to its bin directory.\n' >&2
     exit 1
 fi
 
-printf 'Amethyst %s (%s) → %s\nEquipo: %s · Bundle: %s\n' "$BUILD_VERSION" "$BUILD_TAG" "$DEVICE_NAME" "$TEAM_ID" "$BUNDLE_ID"
+printf 'Amethyst %s (%s) → %s\nTeam: %s · Bundle: %s\n' "$BUILD_VERSION" "$BUILD_TAG" "$DEVICE_NAME" "$TEAM_ID" "$BUNDLE_ID"
 printf 'Runtimes: %s\nRenderer: %s\n' "$DEPENDENCIES_DIR" "$RENDERER_LIB_DIR"
 if [[ "$CHECK_ONLY" == "1" ]]; then
-    printf 'Configuración de desarrollo válida. No se ha compilado ni instalado.\n'
+    printf 'Development configuration is valid. No build or installation was performed.\n'
     exit 0
 fi
 
@@ -277,10 +277,10 @@ if [[ "${LAUNCH_AFTER_INSTALL:-1}" != "0" ]]; then
     fi
     xcrun devicectl device process launch --device "$DEVICE_UDID" "${LAUNCH_OPTIONS[@]}" "$BUNDLE_ID"
     if [[ "${START_STOPPED:-0}" == "1" ]]; then
-        printf 'Amethyst está suspendida. Conecta LLDB para continuar y activar JIT.\n'
+        printf 'Amethyst is suspended. Attach LLDB to continue and enable JIT.\n'
     else
-        printf 'Amethyst está abierta. Para Minecraft, conecta LLDB y activa JIT; mantén el depurador conectado.\n'
+        printf 'Amethyst is running. Attach LLDB and enable JIT for Minecraft; keep the debugger attached.\n'
     fi
 else
-    printf 'Amethyst instalada; se ha omitido el lanzamiento.\n'
+    printf 'Amethyst is installed; launch was skipped.\n'
 fi
