@@ -511,7 +511,7 @@ static NSString *MRCategorySymbol(NSString *category) {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.providerToggle = [[UISegmentedControl alloc] initWithItems:[self.contentType isEqual:@"mod"] ? @[@"Modrinth", @"CurseForge", localize(@"mods.installed.tab", nil)] : @[@"Modrinth", @"CurseForge"]];
+    self.providerToggle = [[UISegmentedControl alloc] initWithItems:@[@"Modrinth", @"CurseForge", localize(@"mods.installed.tab", nil)]];
     [self.providerToggle setEnabled:[CurseForgeAPI isConfigured] forSegmentAtIndex:1];
     self.providerToggle.selectedSegmentIndex = 0;
     self.providerToggle.accessibilityLabel = localize(@"content.provider", nil);
@@ -589,7 +589,11 @@ static NSString *MRCategorySymbol(NSString *category) {
 - (NSString *)sortTitle:(NSString *)value {
     return [self.provider isEqual:@"curseforge"] && [value isEqual:@"relevance"] ? localize(@"content.sort.popularity", nil) : localize([@"mods.sort." stringByAppendingString:value], nil);
 }
-- (void)updateSearchPlaceholder { if (self.isInstalledMode) { self.searchBar.placeholder = localize(@"mods.installed.search", nil); return; } self.searchBar.placeholder = [NSString stringWithFormat:localize(@"content.search_placeholder", nil), ContentProviderTitle(self.provider)]; }
+- (NSString *)installedText:(NSString *)key {
+    if ([self.contentType isEqual:@"mod"]) return localize([@"mods.installed." stringByAppendingString:key], nil);
+    return localize([[@"content.installed." stringByAppendingString:self.contentType] stringByAppendingFormat:@".%@", key], nil);
+}
+- (void)updateSearchPlaceholder { if (self.isInstalledMode) { self.searchBar.placeholder = [self installedText:@"search"]; return; } self.searchBar.placeholder = [NSString stringWithFormat:localize(@"content.search_placeholder", nil), ContentProviderTitle(self.provider)]; }
 - (void)providerChanged:(UISegmentedControl *)sender {
     [self.searchBar resignFirstResponder];
     if (sender.selectedSegmentIndex == 1 && ![CurseForgeAPI isConfigured]) { sender.selectedSegmentIndex = 0; }
@@ -656,7 +660,7 @@ static NSString *MRCategorySymbol(NSString *category) {
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 2; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    if (self.isInstalledMode) return section == 0 ? (self.installedOperation.busy ? 1 : 2) : MAX(1, self.visibleInstalledEntries.count);
+    if (self.isInstalledMode) return section == 0 ? (self.installedOperation.busy || ![self.contentType isEqual:@"mod"] ? 1 : 2) : MAX(1, self.visibleInstalledEntries.count);
     if (section == 0) return [self.contentType isEqual:@"mod"] ? 5 : 4;
     return self.results.count + ((self.loading || self.searchError || !self.results.count || !self.reachedLastPage) ? 1 : 0);
 }
@@ -730,7 +734,7 @@ static NSString *MRCategorySymbol(NSString *category) {
     PLProfiles *profiles = PLProfiles.current;
     NSString *root = profiles.profilePath.stringByDeletingLastPathComponent ?: @"";
     NSString *game = [profiles.selectedProfile[@"gameDir"] isKindOfClass:NSString.class] && [profiles.selectedProfile[@"gameDir"] length] ? profiles.selectedProfile[@"gameDir"] : @".";
-    return [[NSString stringWithFormat:@"%@/%@", root, game].stringByStandardizingPath stringByAppendingPathComponent:@"mods"];
+    return [[NSString stringWithFormat:@"%@/%@", root, game].stringByStandardizingPath stringByAppendingPathComponent:ContentFolder(self.contentType)];
 }
 - (NSArray *)visibleInstalledEntries {
     NSString *query = self.searchBar.text ?: @"";
@@ -764,7 +768,7 @@ static NSString *MRCategorySymbol(NSString *category) {
     cell.textLabel.numberOfLines = 0; cell.detailTextLabel.numberOfLines = 0;
     if (indexPath.section == 0) {
         if (self.installedOperation.busy) {
-            cell.textLabel.text = localize(self.installedOperation.checking ? @"mods.installed.resolving" : @"mods.installed.downloading", nil);
+            cell.textLabel.text = self.installedOperation.checking ? localize([self.contentType isEqual:@"mod"] ? @"mods.installed.resolving" : @"mods.loading", nil) : [self installedText:@"downloading"];
             cell.detailTextLabel.text = self.installedOperation.installingVersion[@"version_number"];
             if (self.installedOperation.progress.totalUnitCount > 0) cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · %d%%", cell.detailTextLabel.text ?: @"", (int)(100 * self.installedOperation.progress.fractionCompleted)];
             UIButton *cancel = [UIButton buttonWithType:UIButtonTypeSystem]; [cancel setTitle:localize(@"mods.install.cancel", nil) forState:UIControlStateNormal]; [cancel sizeToFit]; cancel.enabled = !self.installedOperation.verifying;
@@ -778,14 +782,14 @@ static NSString *MRCategorySymbol(NSString *category) {
     }
     NSArray *entries = self.visibleInstalledEntries;
     if (!entries.count) {
-        cell.textLabel.text = localize(self.installedLoading ? @"mods.loading" : self.installedError ? @"mods.retry" : @"mods.installed.empty", nil);
+        cell.textLabel.text = self.installedLoading ? localize(@"mods.loading", nil) : self.installedError ? localize(@"mods.retry", nil) : [self installedText:@"empty"];
         cell.detailTextLabel.text = self.installedError.localizedDescription; return cell;
     }
     NSDictionary *entry = entries[indexPath.row];
     cell.textLabel.text = entry[@"project"][@"title"] ?: entry[@"filename"];
     NSString *status = localize([entry[@"enabled"] boolValue] ? @"mods.installed.enabled" : @"mods.installed.disabled", nil);
     NSString *version = entry[@"version"][@"version_number"] ?: entry[@"version"][@"name"] ?: @"";
-    NSString *update = entry[@"update"] ? [NSString stringWithFormat:localize(@"mods.installed.update_available", nil), entry[@"update"][@"version_number"] ?: entry[@"update"][@"name"]] : entry[@"updateError"] ?: entry[@"lookupError"] ?: localize(!entry[@"version"] ? @"mods.installed.unidentified" : [entry[@"noCompatibleVersion"] boolValue] ? @"mods.installed.no_compatible" : [entry[@"updatesChecked"] boolValue] ? @"mods.installed.up_to_date" : @"mods.installed.not_checked", nil);
+    NSString *update = entry[@"update"] ? [NSString stringWithFormat:localize(@"mods.installed.update_available", nil), entry[@"update"][@"version_number"] ?: entry[@"update"][@"name"]] : entry[@"updateError"] ?: entry[@"lookupError"] ?: (!entry[@"version"] ? [self installedText:@"unidentified"] : localize([entry[@"noCompatibleVersion"] boolValue] ? @"mods.installed.no_compatible" : [entry[@"updatesChecked"] boolValue] ? @"mods.installed.up_to_date" : @"mods.installed.not_checked", nil));
     NSString *summary = [NSString stringWithFormat:@"%@%@%@", version, version.length ? @" · " : @"", status];
     ModrinthModCell *mod = [tableView dequeueReusableCellWithIdentifier:@"installed-mod"];
     if (!mod) mod = [[ModrinthModCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"installed-mod"];
@@ -837,17 +841,17 @@ static NSString *MRCategorySymbol(NSString *category) {
     if (!entries.count) { if (self.installedError) [self refreshInstalled:YES]; return; }
     NSDictionary *entry = entries[indexPath.row];
     UIAlertController *menu = [UIAlertController alertControllerWithTitle:entry[@"project"][@"title"] ?: entry[@"filename"] message:entry[@"filename"] preferredStyle:UIAlertControllerStyleActionSheet];
-    [menu addAction:[UIAlertAction actionWithTitle:localize([entry[@"enabled"] boolValue] ? @"mods.installed.disable" : entry[@"version"] ? @"mods.installed.enable" : @"mods.installed.enable_file", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        if (![entry[@"enabled"] boolValue] && entry[@"version"]) [self runInstalledVersion:entry[@"version"] entry:entry enable:YES]; else [self changeInstalledEntry:entry remove:NO];
+    [menu addAction:[UIAlertAction actionWithTitle:localize([entry[@"enabled"] boolValue] ? @"mods.installed.disable" : entry[@"version"] && [self.contentType isEqual:@"mod"] ? @"mods.installed.enable" : @"mods.installed.enable_file", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        if (![entry[@"enabled"] boolValue] && entry[@"version"] && [self.contentType isEqual:@"mod"]) [self runInstalledVersion:entry[@"version"] entry:entry enable:YES]; else [self changeInstalledEntry:entry remove:NO];
     }]];
     if (entry[@"update"]) [menu addAction:[UIAlertAction actionWithTitle:localize(@"mods.install.update", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) { [self runInstalledVersion:entry[@"update"] entry:entry enable:NO]; }]];
     if (entry[@"project"]) [menu addAction:[UIAlertAction actionWithTitle:localize(@"mods.installed.versions", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         ModrinthVersionsViewController *vc = [[ModrinthVersionsViewController alloc] initWithStyle:UITableViewStyleInsetGrouped]; vc.project = entry[@"project"]; vc.filters = self.profileDefaults; [self.navigationController pushViewController:vc animated:YES];
     }]];
-    [menu addAction:[UIAlertAction actionWithTitle:localize(@"mods.installed.remove", nil) style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
-        UIAlertController *confirm = [UIAlertController alertControllerWithTitle:localize(@"mods.installed.remove", nil) message:[NSString stringWithFormat:localize(@"mods.installed.remove_confirm", nil), entry[@"filename"]] preferredStyle:UIAlertControllerStyleAlert];
+    [menu addAction:[UIAlertAction actionWithTitle:[self installedText:@"remove"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+        UIAlertController *confirm = [UIAlertController alertControllerWithTitle:[self installedText:@"remove"] message:[NSString stringWithFormat:[self installedText:@"remove_confirm"], entry[@"filename"]] preferredStyle:UIAlertControllerStyleAlert];
         [confirm addAction:[UIAlertAction actionWithTitle:localize(@"Cancel", nil) style:UIAlertActionStyleCancel handler:nil]];
-        [confirm addAction:[UIAlertAction actionWithTitle:localize(@"mods.installed.remove", nil) style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) { [self changeInstalledEntry:entry remove:YES]; }]];
+        [confirm addAction:[UIAlertAction actionWithTitle:[self installedText:@"remove"] style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) { [self changeInstalledEntry:entry remove:YES]; }]];
         [self presentViewController:confirm animated:YES completion:nil];
     }]];
     [menu addAction:[UIAlertAction actionWithTitle:localize(@"Cancel", nil) style:UIAlertActionStyleCancel handler:nil]];

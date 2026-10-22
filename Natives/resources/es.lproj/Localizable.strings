@@ -530,3 +530,16 @@
 "java.error.unknown" = "Error desconocido, posiblemente un fallo de la app";
 "java.error.archive_type" = "El indicador de tipo del archivo no es válido: %c";
 "content.version.recommended" = "Recomendada";
+
+"content.installed.resourcepack.search" = "Buscar paquetes de recursos instalados";
+"content.installed.resourcepack.empty" = "No hay paquetes de recursos instalados que coincidan con esta búsqueda";
+"content.installed.resourcepack.downloading" = "Descargando paquete…";
+"content.installed.resourcepack.unidentified" = "Archivo sin identificar · actualizaciones automáticas no disponibles";
+"content.installed.resourcepack.remove" = "Eliminar paquete";
+"content.installed.resourcepack.remove_confirm" = "¿Eliminar %@ de este perfil?";
+"content.installed.shader.search" = "Buscar paquetes de shaders instalados";
+"content.installed.shader.empty" = "No hay paquetes de shaders instalados que coincidan con esta búsqueda";
+"content.installed.shader.downloading" = "Descargando paquete…";
+"content.installed.shader.unidentified" = "Archivo sin identificar · actualizaciones automáticas no disponibles";
+"content.installed.shader.remove" = "Eliminar paquete";
+"content.installed.shader.remove_confirm" = "¿Eliminar %@ de este perfil?";

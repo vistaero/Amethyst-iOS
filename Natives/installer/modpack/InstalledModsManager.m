@@ -10,9 +10,15 @@ static NSString *IMHash(NSData *data) {
     unsigned char digest[CC_SHA1_DIGEST_LENGTH]; CC_SHA1(data.bytes, (CC_LONG)data.length, digest);
     NSMutableString *hash = [NSMutableString new]; for (NSUInteger i=0; i<sizeof(digest); i++) [hash appendFormat:@"%02x", digest[i]]; return hash;
 }
-static NSString *IMRoot(NSString *directory) { return [directory.stringByDeletingLastPathComponent stringByAppendingPathComponent:@".amethyst-modrinth"]; }
-static BOOL IMName(NSString *name) {
-    return IMString(name).length && [name isEqual:name.lastPathComponent] && ![name containsString:@"\\"] && ![name hasPrefix:@"."] && ([name.lowercaseString hasSuffix:@".jar"] || [name.lowercaseString hasSuffix:@".jar.disabled"]);
+static NSString *IMContentType(NSString *directory) { return @{@"resourcepacks": @"resourcepack", @"shaderpacks": @"shader"}[directory.lastPathComponent] ?: @"mod"; }
+static NSString *IMExtension(NSString *directory) { return [IMContentType(directory) isEqual:@"mod"] ? @"jar" : @"zip"; }
+static NSString *IMRoot(NSString *directory) {
+    NSString *root = [directory.stringByDeletingLastPathComponent stringByAppendingPathComponent:@".amethyst-modrinth"];
+    return [IMContentType(directory) isEqual:@"mod"] ? root : [root stringByAppendingPathComponent:directory.lastPathComponent];
+}
+static BOOL IMName(NSString *name, NSString *directory) {
+    NSString *extension = IMExtension(directory);
+    return IMString(name).length && [name isEqual:name.lastPathComponent] && ![name containsString:@"\\"] && ![name hasPrefix:@"."] && ([name.lowercaseString.pathExtension isEqual:extension] || ([name.lowercaseString hasSuffix:@".disabled"] && [name.stringByDeletingPathExtension.lowercaseString.pathExtension isEqual:extension]));
 }
 static NSData *IMPayload(id value) { return [value isKindOfClass:NSData.class] ? value : [value isKindOfClass:NSString.class] ? [NSData dataWithContentsOfFile:value options:NSDataReadingMappedIfSafe error:nil] : nil; }
 static NSError *IMError(NSString *key, NSString *detail) {
@@ -24,7 +30,7 @@ static ModpackAPI *IMAPI(NSString *provider) { return [provider isEqual:@"cursef
 static NSString *IMID(NSString *provider, NSString *project) { return [NSString stringWithFormat:@"%@:%@", provider, project]; }
 static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **error) {
     NSString *name = entry[@"filename"];
-    NSDictionary *attrs = IMName(name) ? [NSFileManager.defaultManager attributesOfItemAtPath:[directory stringByAppendingPathComponent:name] error:error] : nil;
+    NSDictionary *attrs = IMName(name, directory) ? [NSFileManager.defaultManager attributesOfItemAtPath:[directory stringByAppendingPathComponent:name] error:error] : nil;
     if (![attrs[NSFileType] isEqual:NSFileTypeRegular] || ![[ModrinthModInstallation sha1ForFile:[directory stringByAppendingPathComponent:name] error:error] isEqual:entry[@"sha1"]]) {
         if (error && !*error) *error = IMError(@"mods.install.changed_file", name);
         return NO;
@@ -40,7 +46,7 @@ static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **err
 }
 
 + (NSArray *)entriesInDirectory:(NSString *)directory identify:(BOOL)identify error:(NSError **)error {
-    if (![ModrinthModInstallation isInstalling] && ![self recoverDirectory:directory error:error]) return nil;
+    if (![ModrinthModInstallation isInstalling] && ![ModrinthModInstallation recoverDirectory:directory error:error]) return nil;
     NSFileManager *fm = NSFileManager.defaultManager;
     if (![fm fileExistsAtPath:directory]) return @[];
     NSArray *names = [fm contentsOfDirectoryAtPath:directory error:error];
@@ -49,7 +55,7 @@ static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **err
     NSMutableDictionary *projects = [[NSDictionary dictionaryWithContentsOfFile:[IMRoot(directory) stringByAppendingPathComponent:@"projects.plist"]] mutableCopy] ?: [NSMutableDictionary new];
     NSMutableArray *entries = [NSMutableArray new], *unknown = [NSMutableArray new];
     for (NSString *name in [names sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)]) {
-        if (!IMName(name)) continue;
+        if (!IMName(name, directory)) continue;
         NSString *path = [directory stringByAppendingPathComponent:name];
         if (![[fm attributesOfItemAtPath:path error:nil][NSFileType] isEqual:NSFileTypeRegular]) continue;
         NSString *hash = [ModrinthModInstallation sha1ForFile:path error:error];
@@ -78,7 +84,7 @@ static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **err
         NSString *key = IMID(provider, project);
         NSDictionary *info = projects[key];
         if (identify && !info) { info = [IMAPI(provider) projectForID:project]; if (info) projects[key] = info; }
-        entry[@"project"] = info ?: @{@"id": project, @"provider": provider, @"contentType": @"mod", @"title": IMString(version[@"name"]).length ? version[@"name"] : entry[@"filename"], @"description": @"", @"author": @"", @"imageUrl": @""};
+        entry[@"project"] = info ?: @{@"id": project, @"provider": provider, @"contentType": IMContentType(directory), @"title": IMString(version[@"name"]).length ? version[@"name"] : entry[@"filename"], @"description": @"", @"author": @"", @"imageUrl": @""};
     }
     if (identify) {
         @synchronized (self) {
@@ -104,7 +110,7 @@ static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **err
                 NSArray *versions = [api versionsForProject:project filters:filters];
                 if (versions) versions = [ModrinthSearchFilters versions:versions matchingFilters:filters];
                 NSDictionary *latest;
-                for (NSDictionary *version in [versions sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"date_published" ascending:NO]]]) if (![version[@"downloadUnavailable"] boolValue] && [ModrinthModInstallation jarFileForVersion:version]) { latest = version; break; }
+                for (NSDictionary *version in [versions sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"date_published" ascending:NO]]]) if (![version[@"downloadUnavailable"] boolValue] && [ModrinthModInstallation fileForVersion:version extension:[[ModrinthSearchFilters contentTypeForFilters:filters] isEqual:@"mod"] ? @"jar" : @"zip"]) { latest = version; break; }
                 status = @{@"latest": latest ?: @{}, @"error": api.lastError.localizedDescription ?: @"", @"checked": @(versions != nil)};
                 catalog[key] = status;
             }
@@ -124,6 +130,19 @@ static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **err
     return result;
 }
 + (NSArray *)planForEntries:(NSArray *)entries requested:(NSArray *)requested filters:(NSDictionary *)filters error:(NSError **)error {
+    if (![[ModrinthSearchFilters contentTypeForFilters:filters] isEqual:@"mod"]) {
+        // Packs are independent ZIPs; mod dependency resolution does not apply.
+        NSMutableArray *plan = [NSMutableArray new];
+        for (NSDictionary *request in requested) {
+            NSDictionary *version = request[@"version"];
+            NSString *provider = request[@"provider"] ?: @"modrinth";
+            if (!IMString(version[@"project_id"]).length || ![ModrinthSearchFilters versions:@[version] matchingFilters:filters].count) { if (error) *error = IMError(@"content.download.unavailable", nil); return nil; }
+            NSMutableArray *previous = [NSMutableArray new];
+            for (NSDictionary *entry in entries) if ([entry[@"provider"] isEqual:provider] && [entry[@"version"][@"project_id"] isEqual:version[@"project_id"]]) [previous addObject:entry];
+            [plan addObject:@{@"version":version, @"provider":provider, @"previous":previous, @"disabled":request[@"disabled"] ?: @NO}];
+        }
+        return plan;
+    }
     if (!IMString(filters[@"mcVersion"]).length || !IMString(filters[@"loader"]).length) { if (error) *error = IMError(@"mods.installed.profile_required", nil); return nil; }
     NSMutableDictionary *selected = [NSMutableDictionary new], *providers = [NSMutableDictionary new], *explicit = [NSMutableDictionary new], *pins = [NSMutableDictionary new], *disabled = [NSMutableDictionary new];
     for (NSDictionary *entry in entries) {
@@ -224,7 +243,7 @@ static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **err
         if (!journal) continue;
         if (![journal[@"complete"] boolValue]) {
             if (![journal[@"previous"] isKindOfClass:NSArray.class] || ![journal[@"targets"] isKindOfClass:NSArray.class]) { if (error) *error = IMError(@"mods.install.recovery_error", nil); return NO; }
-            for (NSString *filename in [journal[@"targets"] arrayByAddingObjectsFromArray:journal[@"previous"]]) if (!IMName(filename)) { if (error) *error = IMError(@"mods.install.recovery_error", nil); return NO; }
+            for (NSString *filename in [journal[@"targets"] arrayByAddingObjectsFromArray:journal[@"previous"]]) if (!IMName(filename, directory)) { if (error) *error = IMError(@"mods.install.recovery_error", nil); return NO; }
             for (NSString *filename in journal[@"previous"]) {
                 NSData *data = [NSData dataWithContentsOfFile:[[batch stringByAppendingPathComponent:@"backup"] stringByAppendingPathComponent:filename] options:0 error:error];
                 if (!data || ![data writeToFile:[directory stringByAppendingPathComponent:filename] options:NSDataWritingAtomic error:error]) return NO;
@@ -243,10 +262,10 @@ static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **err
     if (![fm createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:error] || ![self recoverDirectory:directory error:error]) return NO;
     NSMutableOrderedSet *previous = [NSMutableOrderedSet new], *targets = [NSMutableOrderedSet new];
     for (NSDictionary *item in plan) {
-        NSDictionary *file = [ModrinthModInstallation jarFileForVersion:item[@"version"]];
+        NSDictionary *file = [ModrinthModInstallation fileForVersion:item[@"version"] extension:IMExtension(directory)];
         NSString *target = [file[@"filename"] stringByAppendingString:[item[@"disabled"] boolValue] ? @".disabled" : @""];
         NSData *data = IMPayload(payloads[file[@"hashes"][@"sha1"]]);
-        if (!IMName(target) || !data || data.length != [file[@"size"] unsignedLongLongValue] || ![IMHash(data) isEqual:[file[@"hashes"][@"sha1"] lowercaseString]] || [targets containsObject:target]) { if (error) *error = IMError(@"mods.install.name_conflict", target); return NO; }
+        if (!IMName(target, directory) || !data || data.length != [file[@"size"] unsignedLongLongValue] || ![IMHash(data) isEqual:[file[@"hashes"][@"sha1"] lowercaseString]] || [targets containsObject:target]) { if (error) *error = IMError(@"mods.install.name_conflict", target); return NO; }
         [targets addObject:target];
         for (NSDictionary *entry in item[@"previous"]) { if (!IMValidEntry(entry, directory, error)) return NO; [previous addObject:entry[@"filename"]]; }
     }
@@ -260,7 +279,7 @@ static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **err
     if (![journal writeToFile:journalPath atomically:YES]) { if (error) *error = IMError(@"mods.install.recovery_error", nil); [fm removeItemAtPath:batch error:nil]; return NO; }
     BOOL ok = YES;
     for (NSDictionary *item in plan) {
-        NSDictionary *file = [ModrinthModInstallation jarFileForVersion:item[@"version"]];
+        NSDictionary *file = [ModrinthModInstallation fileForVersion:item[@"version"] extension:IMExtension(directory)];
         NSString *name = [file[@"filename"] stringByAppendingString:[item[@"disabled"] boolValue] ? @".disabled" : @""];
         if (![IMPayload(payloads[file[@"hashes"][@"sha1"]]) writeToFile:[directory stringByAppendingPathComponent:name] options:NSDataWritingAtomic error:error]) { ok = NO; break; }
     }
@@ -271,7 +290,7 @@ static BOOL IMValidEntry(NSDictionary *entry, NSString *directory, NSError **err
     if (![self recoverDirectory:directory error:&recoveryError]) { if (error) *error = recoveryError; return NO; }
     if (ok) {
         NSMutableDictionary *index = [[NSDictionary dictionaryWithContentsOfFile:[IMRoot(directory) stringByAppendingPathComponent:@"index.plist"]] mutableCopy] ?: [NSMutableDictionary new];
-        for (NSDictionary *item in plan) { NSDictionary *file = [ModrinthModInstallation jarFileForVersion:item[@"version"]]; NSString *hash = file[@"hashes"][@"sha1"]; index[[item[@"provider"] isEqual:@"curseforge"] ? IMID(@"curseforge", hash) : hash] = item[@"version"]; }
+        for (NSDictionary *item in plan) { NSDictionary *file = [ModrinthModInstallation fileForVersion:item[@"version"] extension:IMExtension(directory)]; NSString *hash = file[@"hashes"][@"sha1"]; index[[item[@"provider"] isEqual:@"curseforge"] ? IMID(@"curseforge", hash) : hash] = item[@"version"]; }
         [[self persistentObject:index] writeToFile:[IMRoot(directory) stringByAppendingPathComponent:@"index.plist"] atomically:YES];
     }
     return ok;

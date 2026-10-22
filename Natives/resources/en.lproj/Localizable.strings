@@ -530,3 +530,16 @@
 "java.error.unknown" = "Unknown error, possibly a bug";
 "java.error.archive_type" = "Invalid archive type flag: %c";
 "content.version.recommended" = "Recommended";
+
+"content.installed.resourcepack.search" = "Search installed resource packs";
+"content.installed.resourcepack.empty" = "No installed resource packs match this search";
+"content.installed.resourcepack.downloading" = "Downloading pack…";
+"content.installed.resourcepack.unidentified" = "Unidentified file · automatic updates unavailable";
+"content.installed.resourcepack.remove" = "Remove pack";
+"content.installed.resourcepack.remove_confirm" = "Remove %@ from this profile?";
+"content.installed.shader.search" = "Search installed shader packs";
+"content.installed.shader.empty" = "No installed shader packs match this search";
+"content.installed.shader.downloading" = "Downloading pack…";
+"content.installed.shader.unidentified" = "Unidentified file · automatic updates unavailable";
+"content.installed.shader.remove" = "Remove pack";
+"content.installed.shader.remove_confirm" = "Remove %@ from this profile?";

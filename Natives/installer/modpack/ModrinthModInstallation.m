@@ -63,7 +63,7 @@ static NSDictionary *MIIdentity(NSDictionary *version, NSString *projectID) {
     if ([activeInstallation.modsDirectory isEqual:directory.stringByStandardizingPath]) return YES;
     ModrinthModInstallation *installation = [self new];
     installation.modsDirectory = directory.stringByStandardizingPath;
-    return [installation recoverTransactions:error] && (![directory.lastPathComponent isEqual:@"mods"] || [InstalledModsManager recoverDirectory:directory error:error]);
+    return [installation recoverTransactions:error] && [InstalledModsManager recoverDirectory:directory error:error];
 }
 + (instancetype)installationForDirectory:(NSString *)directory projectID:(NSString *)projectID {
     return [self installationForDirectory:directory projectID:projectID provider:@"modrinth"];
@@ -299,7 +299,6 @@ static NSDictionary *MIIdentity(NSDictionary *version, NSString *projectID) {
     [self.task resume];
 }
 - (void)installVersion:(NSDictionary *)version resolvingDependenciesWithFilters:(NSDictionary *)filters {
-    if (![self.fileExtension isEqual:@"jar"]) { [self installVersion:version]; return; }
     [self startDependencyOperation:version filters:filters];
 }
 - (void)resolveDependenciesWithFilters:(NSDictionary *)filters { [self startDependencyOperation:nil filters:filters]; }
@@ -330,7 +329,7 @@ static NSDictionary *MIIdentity(NSDictionary *version, NSString *projectID) {
             NSError *stageError;
             if (![NSFileManager.defaultManager createDirectoryAtPath:self.dependencyStage withIntermediateDirectories:YES attributes:nil error:&stageError]) { [self finishDependencyOperation:stageError]; return; }
             int64_t total = 0;
-            for (NSDictionary *item in plan) total += [[self.class jarFileForVersion:item[@"version"]][@"size"] longLongValue];
+            for (NSDictionary *item in plan) total += [[self.class fileForVersion:item[@"version"] extension:self.fileExtension][@"size"] longLongValue];
             self.progress.totalUnitCount = total; [self downloadNextDependency];
         });
     });
@@ -347,7 +346,7 @@ static NSDictionary *MIIdentity(NSDictionary *version, NSString *projectID) {
         return;
     }
     NSDictionary *item = self.dependencyPlan[self.dependencyIndex], *version = item[@"version"];
-    NSDictionary *file = [self.class jarFileForVersion:version]; NSString *hash = file[@"hashes"][@"sha1"];
+    NSDictionary *file = [self.class fileForVersion:version extension:self.fileExtension]; NSString *hash = file[@"hashes"][@"sha1"];
     NSURL *url = [NSURL URLWithString:[file[@"url"] isKindOfClass:NSString.class] ? file[@"url"] : @""];
     NSCharacterSet *hex = [NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdefABCDEF"];
     if (!file || [version[@"downloadUnavailable"] boolValue] || ![url.scheme.lowercaseString isEqual:@"https"] || !url.host.length || ![hash isKindOfClass:NSString.class] || hash.length != 40 || [hash rangeOfCharacterFromSet:hex.invertedSet].location != NSNotFound || [file[@"size"] longLongValue] <= 0) { [self finishDependencyOperation:MIError(@"content.download.unavailable")]; return; }
